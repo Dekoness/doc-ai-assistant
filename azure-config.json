@@ -1,0 +1,14 @@
+{
+  "computerVision": {
+    "endpoint": "https://vision-object-detection.cognitiveservices.azure.com/",
+    "key": "TU_KEY_AQUI"
+  },
+  "formRecognizer": {
+    "endpoint": "https://ocr-document-ai.cognitiveservices.azure.com/",
+    "key": "TU_KEY_AQUI"  
+  },
+  "customVision": {
+    "endpoint": "https://custom-vision-models.cognitiveservices.azure.com/",
+    "key": "TU_KEY_AQUI"
+  }
+}
