@@ -121,7 +121,7 @@ async function analyzeImage() {
             filesize: currentImage.size,
             filetype: currentImage.type,
             timestamp: new Date().toISOString(),
-            test_mode: true  // Por ahora en modo test
+            test_mode: false  // Por ahora en modo test
         };
         
         // Hacer la petición (igual que en consola)
