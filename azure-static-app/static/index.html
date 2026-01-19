@@ -100,184 +100,192 @@
     </div>
 
     <script>
-      let lastExtractedText = "";
+  let lastExtractedText = "";
 
-      // Función para mostrar resultados
-      function showResult(elementId, content, isError = false) {
-        const element = document.getElementById(elementId);
-        element.innerHTML = `<div class="${
-          isError ? "error" : "success"
-        }">${content}</div>`;
+  // Función para mostrar resultados
+  function showResult(elementId, content, isError = false) {
+    const element = document.getElementById(elementId);
+    element.innerHTML = `<div class="${isError ? "error" : "success"}">${content}</div>`;
+  }
+
+  // Función para log
+  function logStatus(message, type = "info") {
+    const logs = document.getElementById("statusLogs");
+    const time = new Date().toLocaleTimeString();
+    const logEntry = `<div class="log-${type}">[${time}] ${message}</div>`;
+    logs.innerHTML = logEntry + logs.innerHTML;
+  }
+
+  // 1. Formulario de imagen (OCR)
+  document.getElementById("imageForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById("imageInput");
+
+    if (!fileInput.files[0]) {
+      showResult("imageResult", "❌ Selecciona una imagen primero", true);
+      return;
+    }
+
+    showResult("imageResult", "⏳ Enviando a Azure Computer Vision...");
+    logStatus("Iniciando análisis de imagen...");
+
+    const formData = new FormData();
+    formData.append("image", fileInput.files[0]);
+
+    try {
+      const response = await fetch("/api/analyze-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      // DEBUG: Ver respuesta cruda
+      const responseText = await response.text();
+      console.log("OCR RAW RESPONSE:", responseText);
+
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}: ${responseText}`);
       }
 
-      // Función para log
-      function logStatus(message, type = "info") {
-        const logs = document.getElementById("statusLogs");
-        const time = new Date().toLocaleTimeString();
-        const logEntry = `<div class="log-${type}">[${time}] ${message}</div>`;
-        logs.innerHTML = logEntry + logs.innerHTML;
-      }
+      const result = JSON.parse(responseText);
 
-      // 1. Formulario de imagen (OCR)
-      document
-        .getElementById("imageForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const fileInput = document.getElementById("imageInput");
+      if (result.success) {
+        lastExtractedText = result.extracted_text || "";
 
-          if (!fileInput.files[0]) {
-            showResult("imageResult", "❌ Selecciona una imagen primero", true);
-            return;
-          }
-
-          showResult("imageResult", "⏳ Enviando a Azure Computer Vision...");
-          logStatus("Iniciando análisis de imagen...");
-
-          const formData = new FormData();
-          formData.append("image", fileInput.files[0]);
-
-          try {
-            const response = await fetch("/api/analyze-image", {
-              method: "POST",
-              body: formData,
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-              lastExtractedText = result.extracted_text;
-
-              let displayText = result.extracted_text;
-              if (!displayText) {
-                displayText = "⚠️ No se encontró texto en la imagen";
-              }
-
-              showResult(
-                "imageResult",
-                `✅ <strong>Texto extraído:</strong><br><pre>${displayText}</pre>`
-              );
-
-              logStatus(
-                `OCR completado: ${result.extracted_text.length} caracteres extraídos`
-              );
-
-              // Mostrar sección de análisis GPT
-              if (result.extracted_text) {
-                document.getElementById("textAnalysisSection").style.display =
-                  "block";
-              }
-            } else {
-              showResult("imageResult", `❌ Error: ${result.error}`, true);
-              logStatus(`Error en OCR: ${result.error}`, "error");
-            }
-          } catch (error) {
-            showResult("imageResult", `❌ Error de conexión: ${error}`, true);
-            logStatus(`Error de red: ${error}`, "error");
-          }
-        });
-
-      // 2. Analizar texto con GPT
-      window.analyzeWithGPT = async function () {
-        if (!lastExtractedText) {
-          showResult("analysisResult", "❌ No hay texto para analizar", true);
-          return;
+        let displayText = result.extracted_text;
+        if (!displayText) {
+          displayText = "⚠️ No se encontró texto en la imagen";
         }
 
         showResult(
-          "analysisResult",
-          "⏳ Enviando a GPT-4.1-mini para análisis..."
+          "imageResult",
+          `✅ <strong>Texto extraído:</strong><br><pre>${displayText}</pre>`
         );
-        logStatus("Enviando texto extraído a GPT para análisis...");
 
-        try {
-          const response = await fetch("/api/analyze-extracted-text", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: lastExtractedText }),
-          });
+        logStatus(
+          `OCR completado: ${result.extracted_text?.length || 0} caracteres extraídos`
+        );
 
-          const result = await response.json();
-
-          if (result.success) {
-            showResult(
-              "analysisResult",
-              `✅ <strong>Análisis GPT:</strong><br>${result.analysis}<br>
-                         <small>Texto original: ${result.original_text}</small>`
-            );
-
-            logStatus(`Análisis GPT completado`);
-          } else {
-            showResult("analysisResult", `❌ Error: ${result.error}`, true);
-            logStatus(`Error en GPT: ${result.error}`, "error");
-          }
-        } catch (error) {
-          showResult("analysisResult", `❌ Error: ${error}`, true);
-          logStatus(`Error de red: ${error}`, "error");
+        // Mostrar sección de análisis GPT
+        if (result.extracted_text) {
+          document.getElementById("textAnalysisSection").style.display = "block";
         }
-      };
+      } else {
+        showResult("imageResult", `❌ Error: ${result.error || "Unknown error"}`, true);
+        logStatus(`Error en OCR: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("OCR Error:", error);
+      showResult("imageResult", `❌ Error: ${error.message}`, true);
+      logStatus(`Error: ${error.message}`, "error");
+    }
+  });
 
-      // 3. Formulario de chat
-      document
-        .getElementById("chatForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const message = document.getElementById("messageInput").value.trim();
+  // 2. Analizar texto con GPT
+  window.analyzeWithGPT = async function () {
+    if (!lastExtractedText) {
+      showResult("analysisResult", "❌ No hay texto para analizar", true);
+      return;
+    }
 
-          if (!message) {
-            showResult("chatResult", "❌ Escribe un mensaje primero", true);
-            return;
-          }
+    showResult(
+      "analysisResult",
+      "⏳ Enviando a GPT-4.1-mini para análisis..."
+    );
+    logStatus("Enviando texto extraído a GPT para análisis...");
 
-          showResult("chatResult", "⏳ GPT-4.1-mini pensando...");
-          logStatus(`Enviando mensaje a GPT: "${message.substring(0, 50)}..."`);
+    try {
+      const response = await fetch("/api/analyze-extracted-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: lastExtractedText }),
+      });
 
-          try {
-            const responseText = await response.text();
-            console.log("RAW RESPONSE:", responseText);
-            console.log("STATUS:", response.status);
-            console.log("HEADERS:", response.headers);
+      // DEBUG: Ver respuesta cruda
+      const responseText = await response.text();
+      console.log("Analyze Text RAW RESPONSE:", responseText);
 
-            try {
-              const result = JSON.parse(responseText);
-              // Procesar result normalmente
-            } catch (e) {
-              console.error("JSON PARSE ERROR:", e);
-              showResult(
-                "chatResult",
-                `❌ Error: La respuesta no es JSON. Servidor dice: ${responseText.substring(
-                  0,
-                  200
-                )}`,
-                true
-              );
-            }
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}: ${responseText}`);
+      }
 
-            if (result.success) {
-              const tokens = result.tokens_used || {};
-              showResult(
-                "chatResult",
-                `✅ <strong>GPT responde:</strong><br>${result.reply}<br>
-                         <small>Tokens: ${
-                           tokens.prompt_tokens || "?"
-                         } entrada, ${
-                  tokens.completion_tokens || "?"
-                } salida</small>`
-              );
+      const result = JSON.parse(responseText);
 
-              logStatus(`GPT respondió (${tokens.total_tokens || "?"} tokens)`);
-            } else {
-              showResult("chatResult", `❌ Error: ${result.error}`, true);
-              logStatus(`Error GPT: ${result.error}`, "error");
-            }
-          } catch (error) {
-            showResult("chatResult", `❌ Error de conexión: ${error}`, true);
-            logStatus(`Error de red: ${error}`, "error");
-          }
-        });
+      if (result.success) {
+        showResult(
+          "analysisResult",
+          `✅ <strong>Análisis GPT:</strong><br>${result.analysis}<br>
+                   <small>Texto original: ${result.original_text || "N/A"}</small>`
+        );
 
-      // Inicialización
-      logStatus("Aplicación cargada y lista");
-      console.log("Portfolio Azure AI - Frontend cargado");
-    </script>
+        logStatus(`Análisis GPT completado`);
+      } else {
+        showResult("analysisResult", `❌ Error: ${result.error || "Unknown error"}`, true);
+        logStatus(`Error en GPT: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Analyze Text Error:", error);
+      showResult("analysisResult", `❌ Error: ${error.message}`, true);
+      logStatus(`Error: ${error.message}`, "error");
+    }
+  };
+
+  // 3. Formulario de chat (VERSIÓN CORREGIDA - tenía errores graves)
+  document.getElementById("chatForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const message = document.getElementById("messageInput").value.trim();
+
+    if (!message) {
+      showResult("chatResult", "❌ Escribe un mensaje primero", true);
+      return;
+    }
+
+    showResult("chatResult", "⏳ GPT-4.1-mini pensando...");
+    logStatus(`Enviando mensaje a GPT: "${message.substring(0, 50)}..."`);
+
+    try {
+      // ERROR ORIGINAL: Falta el fetch() - estaba intentando usar 'response' sin haber hecho fetch
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message }),
+      });
+
+      // DEBUG: Ver respuesta cruda
+      const responseText = await response.text();
+      console.log("CHAT RAW RESPONSE:", responseText);
+      console.log("STATUS:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}: ${responseText.substring(0, 200)}`);
+      }
+
+      const result = JSON.parse(responseText);
+
+      if (result.success) {
+        const tokens = result.tokens_used || {};
+        showResult(
+          "chatResult",
+          `✅ <strong>GPT responde:</strong><br>${result.reply}<br>
+                   <small>Tokens: ${tokens.prompt_tokens || "?"} entrada, ${
+            tokens.completion_tokens || "?"
+          } salida</small>`
+        );
+
+        logStatus(`GPT respondió (${tokens.total_tokens || "?"} tokens)`);
+      } else {
+        showResult("chatResult", `❌ Error: ${result.error || "Unknown error"}`, true);
+        logStatus(`Error GPT: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Chat Error:", error);
+      showResult("chatResult", `❌ Error: ${error.message}`, true);
+      logStatus(`Error: ${error.message}`, "error");
+    }
+  });
+
+  // Inicialización
+  logStatus("Aplicación cargada y lista");
+  console.log("Portfolio Azure AI - Frontend cargado y corregido");
+</script>
   </body>
 </html>
