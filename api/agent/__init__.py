@@ -5,10 +5,7 @@ import os
 import base64
 import time
 
-app = func.FunctionApp()
-
-@app.route(route="agent", auth_level=func.AuthLevel.ANONYMOUS, methods=["POST"])
-def agent(req: func.HttpRequest) -> func.HttpResponse:
+def main(req: func.HttpRequest) -> func.HttpResponse:
     """
     Agente unificado que maneja:
     1. Chat de texto
@@ -48,7 +45,7 @@ def agent(req: func.HttpRequest) -> func.HttpResponse:
         image_base64 = data.get('image', None)
         history = data.get('history', [])
         
-        print(f"Message: {message[:50]}")
+        print(f"Message: {message[:50] if message else 'empty'}")
         print(f"Has image: {bool(image_base64)}")
         
         # Si hay imagen, extraer texto con Computer Vision
@@ -172,6 +169,12 @@ def call_openai_with_context(message, history, openai_key, openai_endpoint):
             'api-key': openai_key
         }
         
+        # Construir URL completa
+        if 'deployments' not in openai_endpoint:
+            full_url = f"{openai_endpoint.rstrip('/')}/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2024-08-01-preview"
+        else:
+            full_url = openai_endpoint
+        
         # Construir mensajes con historial
         messages = [
             {
@@ -192,8 +195,11 @@ def call_openai_with_context(message, history, openai_key, openai_endpoint):
             "temperature": 0.7
         }
         
-        print(f"Endpoint: {openai_endpoint}")
-        response = requests.post(openai_endpoint, headers=headers, json=payload, timeout=60)
+        print(f"URL completa: {full_url}")
+        response = requests.post(full_url, headers=headers, json=payload, timeout=60)
+        
+        print(f"Status code: {response.status_code}")
+        
         response.raise_for_status()
         
         result = response.json()
