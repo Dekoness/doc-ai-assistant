@@ -3,141 +3,247 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portfolio Azure AI</title>
+    <title>Portfolio Azure AI - Chat Inteligente</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="container">
-      <h1>🚀 Portfolio Azure AI</h1>
-      <p class="subtitle">
-        Computer Vision OCR + GPT-4.1-mini | Chat Unificado
-      </p>
+    <div class="background-gradient"></div>
 
-      <!-- CHAT UNIFICADO -->
-      <div class="card chat-card">
-        <h2>💬 Chat con Visión + GPT-4.1-mini</h2>
-        <p>Escribe mensajes o sube imágenes para análisis con OCR y GPT</p>
+    <div class="container">
+      <header class="header-glass">
+        <h1>🤖 Azure AI Assistant</h1>
+        <p class="subtitle">Computer Vision OCR + GPT-4.1-mini</p>
+      </header>
+
+      <!-- CHAT PRINCIPAL -->
+      <div class="chat-container glass">
+        <div class="chat-header">
+          <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span>En línea</span>
+          </div>
+          <div class="stats-mini">
+            <span id="messageCount">0 mensajes</span>
+          </div>
+        </div>
 
         <!-- Historial de conversación -->
         <div id="chatHistory" class="chat-history"></div>
 
         <!-- Formulario de entrada -->
-        <form id="chatForm" class="chat-input-form">
-          <div class="input-group">
-            <label for="imageInput" class="file-label">
-              📎 Adjuntar imagen (opcional)
-            </label>
-            <input
-              type="file"
-              id="imageInput"
-              accept="image/*"
-              style="display: none"
-            />
-            <span id="fileName" class="file-name"></span>
+        <form id="chatForm" class="chat-input-container">
+          <div class="input-wrapper">
+            <!-- Preview de imagen -->
+            <div id="imagePreview" class="image-preview" style="display: none">
+              <img id="previewImg" src="" alt="Preview" />
+              <button type="button" id="removeImage" class="remove-image-btn">
+                ✕
+              </button>
+            </div>
+
+            <!-- Área de texto -->
+            <textarea
+              id="messageInput"
+              placeholder="Escribe tu mensaje o adjunta una imagen..."
+              rows="1"
+            ></textarea>
+
+            <!-- Botones de acción -->
+            <div class="input-actions">
+              <label
+                for="imageInput"
+                class="attach-btn"
+                title="Adjuntar imagen"
+              >
+                📎
+              </label>
+              <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+                style="display: none"
+              />
+
+              <button
+                type="submit"
+                id="sendBtn"
+                class="send-btn"
+                title="Enviar"
+              >
+                <span class="send-icon">📤</span>
+              </button>
+            </div>
           </div>
-
-          <textarea
-            id="messageInput"
-            placeholder="Escribe tu mensaje... (puedes adjuntar una imagen)"
-            rows="3"
-            required
-          ></textarea>
-
-          <button type="submit" id="sendBtn">📤 Enviar</button>
         </form>
       </div>
 
-      <!-- INFO Y COSTOS -->
-      <div class="info">
-        <h3>🔧 Servicios Azure Utilizados:</h3>
-        <div class="services-grid">
-          <div class="service-card">
-            <h4>👁️ Computer Vision</h4>
-            <p>OCR automático en imágenes</p>
-            <span class="free-badge">GRATIS</span>
-          </div>
-          <div class="service-card">
-            <h4>🤖 Azure OpenAI</h4>
-            <p>GPT-4.1-mini con contexto</p>
-            <span class="cost-badge">~$0.83/mes</span>
-          </div>
-          <div class="service-card">
-            <h4>🌐 Static Web Apps</h4>
-            <p>Hosting + Azure Functions</p>
-            <span class="free-badge">GRATIS</span>
+      <!-- ESTADÍSTICAS -->
+      <div class="stats-container">
+        <div class="stat-card glass">
+          <div class="stat-icon">💬</div>
+          <div class="stat-info">
+            <span class="stat-value" id="totalMessages">0</span>
+            <span class="stat-label">Mensajes</span>
           </div>
         </div>
 
-        <div class="cost-warning">
-          <strong>💰 Costo total estimado:</strong> Menos de $5/mes con uso
-          moderado
-          <br />
-          <small>Presupuesto configurado en Azure Portal con alertas</small>
+        <div class="stat-card glass">
+          <div class="stat-icon">📷</div>
+          <div class="stat-info">
+            <span class="stat-value" id="totalImages">0</span>
+            <span class="stat-label">Imágenes</span>
+          </div>
+        </div>
+
+        <div class="stat-card glass">
+          <div class="stat-icon">🔤</div>
+          <div class="stat-info">
+            <span class="stat-value" id="totalTokens">0</span>
+            <span class="stat-label">Tokens</span>
+          </div>
+        </div>
+
+        <div class="stat-card glass">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-info">
+            <span class="stat-value" id="avgResponseTime">0ms</span>
+            <span class="stat-label">Tiempo promedio</span>
+          </div>
         </div>
       </div>
 
-      <!-- LOGS -->
-      <div class="logs">
-        <h3>📊 Estado del Sistema</h3>
-        <div id="statusLogs"></div>
+      <!-- INFO DE SERVICIOS -->
+      <div class="services-info glass">
+        <h3>🔧 Servicios Azure Utilizados</h3>
+        <div class="services-grid">
+          <div class="service-badge">
+            <span class="service-icon">👁️</span>
+            <span>Computer Vision</span>
+            <span class="badge-free">GRATIS</span>
+          </div>
+          <div class="service-badge">
+            <span class="service-icon">🤖</span>
+            <span>Azure OpenAI</span>
+            <span class="badge-cost">~$0.83/mes</span>
+          </div>
+          <div class="service-badge">
+            <span class="service-icon">🌐</span>
+            <span>Static Web Apps</span>
+            <span class="badge-free">GRATIS</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <script>
       let conversationHistory = [];
       let selectedFile = null;
+      let stats = {
+        messages: 0,
+        images: 0,
+        tokens: 0,
+        responseTimes: [],
+      };
 
-      function logStatus(message, type = "info") {
-        const logs = document.getElementById("statusLogs");
-        const time = new Date().toLocaleTimeString();
-        const logEntry = `<div class="log-${type}">[${time}] ${message}</div>`;
-        logs.innerHTML = logEntry + logs.innerHTML;
+      // Auto-resize textarea
+      const messageInput = document.getElementById("messageInput");
+      messageInput.addEventListener("input", function () {
+        this.style.height = "auto";
+        this.style.height = Math.min(this.scrollHeight, 120) + "px";
+      });
+
+      // Manejar selección de archivo
+      document.getElementById("imageInput").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+
+        if (file) {
+          selectedFile = file;
+
+          // Mostrar preview
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            const preview = document.getElementById("imagePreview");
+            const previewImg = document.getElementById("previewImg");
+            previewImg.src = event.target.result;
+            preview.style.display = "flex";
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Botón para remover imagen
+      document.getElementById("removeImage").addEventListener("click", () => {
+        selectedFile = null;
+        document.getElementById("imageInput").value = "";
+        document.getElementById("imagePreview").style.display = "none";
+      });
+
+      function updateStats() {
+        document.getElementById("totalMessages").textContent = stats.messages;
+        document.getElementById("totalImages").textContent = stats.images;
+        document.getElementById("totalTokens").textContent = stats.tokens;
+        document.getElementById(
+          "messageCount"
+        ).textContent = `${stats.messages} mensajes`;
+
+        if (stats.responseTimes.length > 0) {
+          const avg =
+            stats.responseTimes.reduce((a, b) => a + b, 0) /
+            stats.responseTimes.length;
+          document.getElementById(
+            "avgResponseTime"
+          ).textContent = `${Math.round(avg)}ms`;
+        }
       }
 
-      function addMessageToChat(role, content, hasImage = false) {
+      function addMessageToChat(
+        role,
+        content,
+        hasImage = false,
+        extractedText = null
+      ) {
         const chatHistory = document.getElementById("chatHistory");
         const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${role}`;
+        messageDiv.className = `message ${role} fade-in`;
 
         const icon = role === "user" ? "👤" : "🤖";
         const label = role === "user" ? "Tú" : "Asistente";
-        const imageTag = hasImage
-          ? '<span class="image-tag">📷 Imagen adjunta</span>'
-          : "";
+        const time = new Date().toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        let imageTag = "";
+        if (hasImage) {
+          imageTag = '<div class="message-tag">📷 Imagen analizada</div>';
+        }
+
+        let ocrSection = "";
+        if (extractedText) {
+          ocrSection = `
+            <div class="ocr-result">
+              <strong>📄 Texto extraído:</strong>
+              <pre>${extractedText}</pre>
+            </div>
+          `;
+        }
 
         messageDiv.innerHTML = `
-          <div class="message-header">
-            <strong>${icon} ${label}</strong>
-            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+          <div class="message-avatar">${icon}</div>
+          <div class="message-content-wrapper">
+            <div class="message-header">
+              <strong>${label}</strong>
+              <span class="timestamp">${time}</span>
+            </div>
+            ${imageTag}
+            ${ocrSection}
+            <div class="message-text">${content.replace(/\n/g, "<br>")}</div>
           </div>
-          ${imageTag}
-          <div class="message-content">${content.replace(/\n/g, "<br>")}</div>
         `;
 
         chatHistory.appendChild(messageDiv);
         chatHistory.scrollTop = chatHistory.scrollHeight;
       }
-
-      // Manejar selección de archivo
-      document.getElementById("imageInput").addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        const fileNameSpan = document.getElementById("fileName");
-
-        if (file) {
-          selectedFile = file;
-          fileNameSpan.textContent = `📷 ${file.name}`;
-          fileNameSpan.style.display = "inline";
-        } else {
-          selectedFile = null;
-          fileNameSpan.textContent = "";
-          fileNameSpan.style.display = "none";
-        }
-      });
-
-      // Click en label para abrir selector de archivos
-      document.querySelector(".file-label").addEventListener("click", () => {
-        document.getElementById("imageInput").click();
-      });
 
       // Enviar mensaje
       document
@@ -145,24 +251,31 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
 
-          const messageInput = document.getElementById("messageInput");
           const message = messageInput.value.trim();
           const sendBtn = document.getElementById("sendBtn");
 
-          if (!message) return;
+          if (!message && !selectedFile) return;
 
           // Deshabilitar botón
           sendBtn.disabled = true;
-          sendBtn.textContent = "⏳ Enviando...";
+          sendBtn.innerHTML = '<span class="send-icon spinning">⏳</span>';
+
+          const startTime = Date.now();
 
           // Mostrar mensaje del usuario
-          addMessageToChat("user", message, !!selectedFile);
-          logStatus(`Enviando: "${message.substring(0, 50)}..."`);
+          addMessageToChat(
+            "user",
+            message || "(imagen sin texto)",
+            !!selectedFile
+          );
+
+          stats.messages++;
+          if (selectedFile) stats.images++;
+          updateStats();
 
           try {
             let imageBase64 = null;
 
-            // Si hay imagen, convertir a base64
             if (selectedFile) {
               imageBase64 = await new Promise((resolve) => {
                 const reader = new FileReader();
@@ -171,58 +284,61 @@
               });
             }
 
-            // Llamar a la API
             const response = await fetch("/api/agent", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                message: message,
+                message: message || "Analiza esta imagen",
                 image: imageBase64,
                 history: conversationHistory,
               }),
             });
 
-            const responseText = await response.text();
-            console.log("Agent Response:", responseText);
-
             if (!response.ok) {
-              throw new Error(`Error ${response.status}: ${responseText}`);
+              throw new Error(`Error ${response.status}`);
             }
 
-            const result = JSON.parse(responseText);
+            const result = await response.json();
 
             if (result.success) {
               conversationHistory = result.history_updated;
 
-              // Mostrar texto extraído si hay imagen
-              let assistantMessage = result.reply;
-              if (result.extracted_text) {
-                assistantMessage = `📄 <strong>Texto detectado:</strong>\n${result.extracted_text}\n\n${result.reply}`;
-              }
+              const responseTime = Date.now() - startTime;
+              stats.responseTimes.push(responseTime);
+              stats.tokens += 150; // Estimación
 
-              addMessageToChat("assistant", assistantMessage);
-              logStatus(`Respuesta recibida`);
+              addMessageToChat(
+                "assistant",
+                result.reply,
+                false,
+                result.extracted_text
+              );
+              updateStats();
 
               // Limpiar formulario
               messageInput.value = "";
+              messageInput.style.height = "auto";
               selectedFile = null;
-              document.getElementById("fileName").textContent = "";
-              document.getElementById("fileName").style.display = "none";
               document.getElementById("imageInput").value = "";
+              document.getElementById("imagePreview").style.display = "none";
             } else {
               throw new Error(result.error || "Error desconocido");
             }
           } catch (error) {
-            console.error("Error:", error);
             addMessageToChat("assistant", `❌ Error: ${error.message}`);
-            logStatus(`Error: ${error.message}`, "error");
           } finally {
             sendBtn.disabled = false;
-            sendBtn.textContent = "📤 Enviar";
+            sendBtn.innerHTML = '<span class="send-icon">📤</span>';
           }
         });
 
-      logStatus("Aplicación cargada correctamente");
+      // Mensaje de bienvenida
+      setTimeout(() => {
+        addMessageToChat(
+          "assistant",
+          "¡Hola! Soy tu asistente de Azure AI. Puedo analizar imágenes con OCR y responder tus preguntas. ¿En qué puedo ayudarte?"
+        );
+      }, 500);
     </script>
   </body>
 </html>
