@@ -100,192 +100,140 @@
     </div>
 
     <script>
-  let lastExtractedText = "";
+      let conversationHistory = [];
 
-  // Función para mostrar resultados
-  function showResult(elementId, content, isError = false) {
-    const element = document.getElementById(elementId);
-    element.innerHTML = `<div class="${isError ? "error" : "success"}">${content}</div>`;
-  }
-
-  // Función para log
-  function logStatus(message, type = "info") {
-    const logs = document.getElementById("statusLogs");
-    const time = new Date().toLocaleTimeString();
-    const logEntry = `<div class="log-${type}">[${time}] ${message}</div>`;
-    logs.innerHTML = logEntry + logs.innerHTML;
-  }
-
-  // 1. Formulario de imagen (OCR)
-  document.getElementById("imageForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const fileInput = document.getElementById("imageInput");
-
-    if (!fileInput.files[0]) {
-      showResult("imageResult", "❌ Selecciona una imagen primero", true);
-      return;
-    }
-
-    showResult("imageResult", "⏳ Enviando a Azure Computer Vision...");
-    logStatus("Iniciando análisis de imagen...");
-
-    const formData = new FormData();
-    formData.append("image", fileInput.files[0]);
-
-    try {
-      const response = await fetch("/api/analyze-image", {
-        method: "POST",
-        body: formData,
-      });
-
-      // DEBUG: Ver respuesta cruda
-      const responseText = await response.text();
-      console.log("OCR RAW RESPONSE:", responseText);
-
-      if (!response.ok) {
-        throw new Error(`Server error ${response.status}: ${responseText}`);
+      function showResult(elementId, content, isError = false) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = `<div class="${
+          isError ? "error" : "success"
+        }">${content}</div>`;
       }
 
-      const result = JSON.parse(responseText);
-
-      if (result.success) {
-        lastExtractedText = result.extracted_text || "";
-
-        let displayText = result.extracted_text;
-        if (!displayText) {
-          displayText = "⚠️ No se encontró texto en la imagen";
-        }
-
-        showResult(
-          "imageResult",
-          `✅ <strong>Texto extraído:</strong><br><pre>${displayText}</pre>`
-        );
-
-        logStatus(
-          `OCR completado: ${result.extracted_text?.length || 0} caracteres extraídos`
-        );
-
-        // Mostrar sección de análisis GPT
-        if (result.extracted_text) {
-          document.getElementById("textAnalysisSection").style.display = "block";
-        }
-      } else {
-        showResult("imageResult", `❌ Error: ${result.error || "Unknown error"}`, true);
-        logStatus(`Error en OCR: ${result.error}`, "error");
-      }
-    } catch (error) {
-      console.error("OCR Error:", error);
-      showResult("imageResult", `❌ Error: ${error.message}`, true);
-      logStatus(`Error: ${error.message}`, "error");
-    }
-  });
-
-  // 2. Analizar texto con GPT
-  window.analyzeWithGPT = async function () {
-    if (!lastExtractedText) {
-      showResult("analysisResult", "❌ No hay texto para analizar", true);
-      return;
-    }
-
-    showResult(
-      "analysisResult",
-      "⏳ Enviando a GPT-4.1-mini para análisis..."
-    );
-    logStatus("Enviando texto extraído a GPT para análisis...");
-
-    try {
-      const response = await fetch("/api/analyze-extracted-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: lastExtractedText }),
-      });
-
-      // DEBUG: Ver respuesta cruda
-      const responseText = await response.text();
-      console.log("Analyze Text RAW RESPONSE:", responseText);
-
-      if (!response.ok) {
-        throw new Error(`Server error ${response.status}: ${responseText}`);
+      function logStatus(message, type = "info") {
+        const logs = document.getElementById("statusLogs");
+        const time = new Date().toLocaleTimeString();
+        const logEntry = `<div class="log-${type}">[${time}] ${message}</div>`;
+        logs.innerHTML = logEntry + logs.innerHTML;
       }
 
-      const result = JSON.parse(responseText);
+      // 1. Formulario de imagen (OCR + Chat unificado)
+      document
+        .getElementById("imageForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const fileInput = document.getElementById("imageInput");
 
-      if (result.success) {
-        showResult(
-          "analysisResult",
-          `✅ <strong>Análisis GPT:</strong><br>${result.analysis}<br>
-                   <small>Texto original: ${result.original_text || "N/A"}</small>`
-        );
+          if (!fileInput.files[0]) {
+            showResult("imageResult", "❌ Selecciona una imagen primero", true);
+            return;
+          }
 
-        logStatus(`Análisis GPT completado`);
-      } else {
-        showResult("analysisResult", `❌ Error: ${result.error || "Unknown error"}`, true);
-        logStatus(`Error en GPT: ${result.error}`, "error");
-      }
-    } catch (error) {
-      console.error("Analyze Text Error:", error);
-      showResult("analysisResult", `❌ Error: ${error.message}`, true);
-      logStatus(`Error: ${error.message}`, "error");
-    }
-  };
+          showResult("imageResult", "⏳ Procesando imagen...");
+          logStatus("Enviando imagen al agente...");
 
-  // 3. Formulario de chat (VERSIÓN CORREGIDA - tenía errores graves)
-  document.getElementById("chatForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const message = document.getElementById("messageInput").value.trim();
+          const reader = new FileReader();
+          reader.onloadend = async function () {
+            try {
+              const response = await fetch("/api/agent", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  message: "Analiza esta imagen y dime qué texto contiene",
+                  image: reader.result,
+                  history: conversationHistory,
+                }),
+              });
 
-    if (!message) {
-      showResult("chatResult", "❌ Escribe un mensaje primero", true);
-      return;
-    }
+              const responseText = await response.text();
+              console.log("Agent Response:", responseText);
 
-    showResult("chatResult", "⏳ GPT-4.1-mini pensando...");
-    logStatus(`Enviando mensaje a GPT: "${message.substring(0, 50)}..."`);
+              if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${responseText}`);
+              }
 
-    try {
-      // ERROR ORIGINAL: Falta el fetch() - estaba intentando usar 'response' sin haber hecho fetch
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: message }),
-      });
+              const result = JSON.parse(responseText);
 
-      // DEBUG: Ver respuesta cruda
-      const responseText = await response.text();
-      console.log("CHAT RAW RESPONSE:", responseText);
-      console.log("STATUS:", response.status);
+              if (result.success) {
+                conversationHistory = result.history_updated;
 
-      if (!response.ok) {
-        throw new Error(`Server error ${response.status}: ${responseText.substring(0, 200)}`);
-      }
+                showResult(
+                  "imageResult",
+                  `✅ <strong>Texto extraído:</strong><br><pre>${
+                    result.extracted_text || "Sin texto"
+                  }</pre>
+             <br><strong>Análisis GPT:</strong><br>${result.reply}`
+                );
 
-      const result = JSON.parse(responseText);
+                logStatus(`OCR + GPT completado`);
+              } else {
+                showResult("imageResult", `❌ Error: ${result.error}`, true);
+                logStatus(`Error: ${result.error}`, "error");
+              }
+            } catch (error) {
+              console.error("Error:", error);
+              showResult("imageResult", `❌ Error: ${error.message}`, true);
+              logStatus(`Error: ${error.message}`, "error");
+            }
+          };
+          reader.readAsDataURL(fileInput.files[0]);
+        });
 
-      if (result.success) {
-        const tokens = result.tokens_used || {};
-        showResult(
-          "chatResult",
-          `✅ <strong>GPT responde:</strong><br>${result.reply}<br>
-                   <small>Tokens: ${tokens.prompt_tokens || "?"} entrada, ${
-            tokens.completion_tokens || "?"
-          } salida</small>`
-        );
+      // 2. Chat de texto
+      document
+        .getElementById("chatForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const message = document.getElementById("messageInput").value.trim();
 
-        logStatus(`GPT respondió (${tokens.total_tokens || "?"} tokens)`);
-      } else {
-        showResult("chatResult", `❌ Error: ${result.error || "Unknown error"}`, true);
-        logStatus(`Error GPT: ${result.error}`, "error");
-      }
-    } catch (error) {
-      console.error("Chat Error:", error);
-      showResult("chatResult", `❌ Error: ${error.message}`, true);
-      logStatus(`Error: ${error.message}`, "error");
-    }
-  });
+          if (!message) {
+            showResult("chatResult", "❌ Escribe un mensaje", true);
+            return;
+          }
 
-  // Inicialización
-  logStatus("Aplicación cargada y lista");
-  console.log("Portfolio Azure AI - Frontend cargado y corregido");
-</script>
+          showResult("chatResult", "⏳ GPT pensando...");
+          logStatus(`Enviando: "${message.substring(0, 50)}..."`);
+
+          try {
+            const response = await fetch("/api/agent", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: message,
+                history: conversationHistory,
+              }),
+            });
+
+            const responseText = await response.text();
+            console.log("Agent Response:", responseText);
+
+            if (!response.ok) {
+              throw new Error(`Error ${response.status}: ${responseText}`);
+            }
+
+            const result = JSON.parse(responseText);
+
+            if (result.success) {
+              conversationHistory = result.history_updated;
+
+              showResult(
+                "chatResult",
+                `✅ <strong>GPT responde:</strong><br>${result.reply}`
+              );
+
+              logStatus(`GPT respondió`);
+              document.getElementById("messageInput").value = "";
+            } else {
+              showResult("chatResult", `❌ Error: ${result.error}`, true);
+              logStatus(`Error: ${result.error}`, "error");
+            }
+          } catch (error) {
+            console.error("Error:", error);
+            showResult("chatResult", `❌ Error: ${error.message}`, true);
+            logStatus(`Error: ${error.message}`, "error");
+          }
+        });
+
+      logStatus("Aplicación cargada");
+    </script>
   </body>
 </html>
