@@ -8,60 +8,43 @@ from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    """
-    Agente RAG unificado que maneja:
-    1. Chat de texto con conocimiento personalizado
-    2. Imágenes + texto (OCR con Computer Vision)
-    3. Historial de conversación
-    4. Búsqueda en base de conocimiento
-    """
+    """Agente RAG unificado"""
     try:
         print("=== INICIO REQUEST ===")
         
-        # Cargar variables de entorno
         VISION_KEY = os.environ.get("VISION_KEY")
         VISION_ENDPOINT = os.environ.get("VISION_ENDPOINT")
         OPENAI_KEY = os.environ.get("OPENAI_KEY")
         OPENAI_ENDPOINT = os.environ.get("OPENAI_ENDPOINT")
         SEARCH_ENDPOINT = os.environ.get("SEARCH_ENDPOINT")
         SEARCH_KEY = os.environ.get("SEARCH_ADMIN_KEY")
-        SEARCH_INDEX = os.environ.get("SEARCH_INDEX_NAME", "knowledge-base-index")
+        SEARCH_INDEX = os.environ.get("SEARCH_INDEX_NAME", "certificado-federico")
         
-        # Verificar variables esenciales
         if not all([VISION_KEY, VISION_ENDPOINT, OPENAI_KEY, OPENAI_ENDPOINT]):
             return func.HttpResponse(
-                json.dumps({
-                    "success": False,
-                    "error": "Faltan variables de entorno esenciales"
-                }),
+                json.dumps({"success": False, "error": "Faltan variables de entorno"}),
                 status_code=500,
                 mimetype="application/json"
             )
         
-        # Parsear request
         data = req.get_json()
         message = data.get('message', '')
         image_base64 = data.get('image', None)
         history = data.get('history', [])
         
-        print(f"Message: {message[:50] if message else 'empty'}")
-        print(f"Has image: {bool(image_base64)}")
+        print(f"📝 Message: {message[:100]}")
         
-        # OCR si hay imagen
         ocr_text = None
         if image_base64:
             ocr_text = process_image_with_vision(image_base64, VISION_KEY, VISION_ENDPOINT)
             if ocr_text:
-                message = f"[Imagen subida] Texto detectado:\n{ocr_text}\n\nUsuario dice: {message}"
-            else:
-                message = f"[Imagen subida sin texto detectado]\n\nUsuario dice: {message}"
+                message = f"[Imagen adjunta]\n{ocr_text}\n\nPregunta: {message}"
         
-        # 🔍 BÚSQUEDA EN BASE DE CONOCIMIENTO (si está configurado)
         context_from_kb = ""
         used_rag = False
         
         if SEARCH_ENDPOINT and SEARCH_KEY:
-            print("🔍 Buscando en base de conocimiento...")
+            print(f"🔍 Buscando en índice: {SEARCH_INDEX}")
             context_from_kb = search_knowledge_base(
                 query=message,
                 search_endpoint=SEARCH_ENDPOINT,
@@ -71,9 +54,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             
             if context_from_kb:
                 used_rag = True
-                print(f"✅ Contexto encontrado: {len(context_from_kb)} caracteres")
+                print(f"✅ RAG activado: {len(context_from_kb)} chars")
         
-        # Llamar a OpenAI con contexto (KB + historial)
         gpt_response = call_openai_with_context(
             message=message,
             history=history,
@@ -82,7 +64,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             openai_endpoint=OPENAI_ENDPOINT
         )
         
-        # Construir respuesta
         response_data = {
             "success": True,
             "reply": gpt_response,
@@ -95,8 +76,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             ]
         }
         
-        print("=== REQUEST EXITOSO ===")
-        
         return func.HttpResponse(
             json.dumps(response_data, ensure_ascii=False),
             mimetype="application/json",
@@ -104,25 +83,19 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
         
     except Exception as e:
-        print(f"ERROR GLOBAL: {str(e)}")
+        print(f"❌ ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
         
         return func.HttpResponse(
-            json.dumps({
-                "success": False,
-                "error": str(e)
-            }),
+            json.dumps({"success": False, "error": str(e)}),
             status_code=500,
             mimetype="application/json"
         )
 
 
 def search_knowledge_base(query, search_endpoint, search_key, index_name):
-    """
-    🔍 Busca en Azure AI Search y devuelve contexto relevante
-    Optimizado para el índice 'certificado-federico'
-    """
+    """🔍 Búsqueda inteligente en certificados"""
     try:
         credential = AzureKeyCredential(search_key)
         search_client = SearchClient(
@@ -131,14 +104,26 @@ def search_knowledge_base(query, search_endpoint, search_key, index_name):
             credential=credential
         )
         
-        print(f"🔎 Ejecutando búsqueda en '{index_name}': '{query[:50]}...'")
+        print(f"🔎 Query: '{query[:100]}'")
         
-        # Búsqueda optimizada para tu índice
-        results = search_client.search(
-            search_text=query,
-            top=3,
-            include_total_count=True
-        )
+        # Detectar consultas genéricas
+        generic_keywords = ['qué certificados', 'cuáles certificados', 'todos', 'certificaciones', 
+                           'titulos', 'formación', 'estudios', 'tiene federico']
+        
+        is_generic = any(kw in query.lower() for kw in generic_keywords)
+        
+        if is_generic:
+            print("🌐 Consulta genérica - Obteniendo TODOS los certificados")
+            results = search_client.search(search_text='*', top=10, include_total_count=True)
+        else:
+            print("🎯 Búsqueda específica")
+            results = search_client.search(
+                search_text=query,
+                search_mode='any',
+                search_fields=['chunk', 'title', 'keyPhrases', 'persons', 'organizations'],
+                top=5,
+                include_total_count=True
+            )
         
         context_parts = []
         result_count = 0
@@ -146,181 +131,118 @@ def search_knowledge_base(query, search_endpoint, search_key, index_name):
         for result in results:
             result_count += 1
             
-            print(f"📄 Documento {result_count} encontrado")
-            
-            # 🎯 Extraer contenido del campo 'chunk'
             content = result.get('chunk', '')
-            
-            # 📋 Extraer metadatos útiles
-            title = result.get('title', f'documento_{result_count}')
+            title = result.get('title', f'doc_{result_count}')
             key_phrases = result.get('keyPhrases', [])
             persons = result.get('persons', [])
-            locations = result.get('locations', [])
             organizations = result.get('organizations', [])
+            locations = result.get('locations', [])
             
             if content and len(content) > 20:
-                # Construir contexto enriquecido
-                enriched_content = f"📄 [Certificado: {title}]\n\n"
+                enriched = f"📄 [{title}]\n\n"
                 
-                # Agregar entidades extraídas si existen
                 if persons:
-                    enriched_content += f"👤 Personas: {', '.join(persons)}\n"
+                    enriched += f"👤 {', '.join(persons)}\n"
                 if organizations:
-                    enriched_content += f"🏢 Organizaciones: {', '.join(organizations)}\n"
+                    enriched += f"🏢 {', '.join(organizations)}\n"
                 if locations:
-                    enriched_content += f"📍 Ubicaciones: {', '.join(locations)}\n"
+                    enriched += f"📍 {', '.join(locations)}\n"
                 if key_phrases:
-                    enriched_content += f"🔑 Conceptos clave: {', '.join(key_phrases[:5])}\n"
+                    enriched += f"🔑 {', '.join(key_phrases[:7])}\n"
                 
-                enriched_content += f"\n📝 Contenido:\n{content[:1200]}"
+                enriched += f"\n{content[:1200]}"
                 
-                context_parts.append(enriched_content)
-                print(f"✅ Fragmento agregado: {title} ({len(content)} chars)")
-            else:
-                print(f"⚠️ Documento sin contenido suficiente")
+                context_parts.append(enriched)
+                print(f"✅ Agregado: {title}")
         
-        print(f"📊 Búsqueda completada: {result_count} resultados, {len(context_parts)} con contenido")
+        print(f"📊 {result_count} resultados → {len(context_parts)} con contenido")
         
-        if context_parts:
-            return "\n\n" + "="*60 + "\n\n".join(context_parts)
-        else:
-            print("⚠️ No se encontró contexto útil")
-            return ""
+        return "\n\n" + "="*60 + "\n\n".join(context_parts) if context_parts else ""
             
     except Exception as e:
-        print(f"❌ Error en búsqueda: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Error búsqueda: {str(e)}")
         return ""
 
 
 def process_image_with_vision(image_base64, vision_key, vision_endpoint):
-    """Usa Azure Computer Vision para OCR"""
+    """OCR con Computer Vision"""
     try:
-        print("Iniciando OCR...")
-        
         if ',' in image_base64:
             image_data = base64.b64decode(image_base64.split(',')[1])
         else:
             image_data = base64.b64decode(image_base64)
         
-        headers = {
-            'Ocp-Apim-Subscription-Key': vision_key,
-            'Content-Type': 'application/octet-stream'
-        }
-        
+        headers = {'Ocp-Apim-Subscription-Key': vision_key, 'Content-Type': 'application/octet-stream'}
         url = f"{vision_endpoint.rstrip('/')}/vision/v3.2/read/analyze"
         
-        print(f"Llamando a Vision API: {url}")
         response = requests.post(url, headers=headers, data=image_data, timeout=30)
         response.raise_for_status()
         
         operation_url = response.headers.get('Operation-Location')
-        print(f"Operation URL: {operation_url}")
         
-        for attempt in range(15):
+        for _ in range(15):
             time.sleep(1)
-            result = requests.get(
-                operation_url, 
-                headers={'Ocp-Apim-Subscription-Key': vision_key},
-                timeout=10
-            )
+            result = requests.get(operation_url, headers={'Ocp-Apim-Subscription-Key': vision_key}, timeout=10)
             result_json = result.json()
             
-            status = result_json.get('status')
-            print(f"Attempt {attempt + 1}: Status = {status}")
-            
-            if status == 'succeeded':
+            if result_json.get('status') == 'succeeded':
                 lines = []
-                for read_result in result_json.get('analyzeResult', {}).get('readResults', []):
-                    for line in read_result.get('lines', []):
+                for rr in result_json.get('analyzeResult', {}).get('readResults', []):
+                    for line in rr.get('lines', []):
                         lines.append(line['text'])
-                
-                extracted_text = '\n'.join(lines)
-                print(f"OCR completado: {len(lines)} líneas")
-                return extracted_text
-            
-            elif status == 'failed':
-                print("OCR falló")
+                return '\n'.join(lines)
+            elif result_json.get('status') == 'failed':
                 return None
         
-        print("OCR timeout")
         return None
-        
     except Exception as e:
-        print(f"Error en OCR: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ OCR error: {str(e)}")
         return None
 
 
 def call_openai_with_context(message, history, knowledge_base_context, openai_key, openai_endpoint):
-    """🤖 Llama a Azure OpenAI con contexto RAG"""
+    """🤖 GPT con RAG"""
     try:
-        print("Llamando a OpenAI...")
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'api-key': openai_key
-        }
+        headers = {'Content-Type': 'application/json', 'api-key': openai_key}
         
         if 'deployments' not in openai_endpoint:
             full_url = f"{openai_endpoint.rstrip('/')}/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2024-08-01-preview"
         else:
             full_url = openai_endpoint
         
-        # 🎯 SYSTEM PROMPT especializado en certificaciones
-        system_prompt = """Eres un asistente especializado en información sobre Federico Zoppi y sus certificaciones profesionales.
+        system_prompt = """Eres un asistente especializado en Federico Zoppi y sus certificaciones.
 
 INSTRUCCIONES:
-1. Tienes acceso a certificados académicos y profesionales de Federico Zoppi
-2. Cuando te presenten información de certificados, úsala como fuente AUTORITATIVA
-3. Cita siempre el nombre del certificado cuando respondas
-4. Si no encuentras información específica, di "No tengo esa información en los certificados disponibles"
-5. Puedes mencionar: institución emisora, fecha, duración, conceptos clave
-6. Responde en español de forma profesional y clara
-7. Si te preguntan por certificados que no están en la base de datos, sé honesto
-
-EJEMPLO DE RESPUESTA:
-"Según el certificado de 4Geeks Academy, Federico Zoppi completó el programa Full Stack Software Developer de 360 horas en agosto de 2025."
-"""
+1. Usa los certificados proporcionados como fuente AUTORITATIVA
+2. Cita siempre el nombre del certificado/institución
+3. Si no tienes información, di "No tengo esa información en los certificados"
+4. Responde en español de forma profesional"""
 
         messages = [{"role": "system", "content": system_prompt}]
         
-        # 📚 Agregar contexto de certificados
         if knowledge_base_context:
-            kb_message = f"""📚 CERTIFICADOS DE FEDERICO ZOPPI ENCONTRADOS:
+            kb_msg = f"""📚 CERTIFICADOS DE FEDERICO ZOPPI:
 
 {knowledge_base_context}
 
 ---
-Usa ÚNICAMENTE esta información para responder. No inventes certificados que no aparecen aquí."""
-            
-            messages.append({"role": "system", "content": kb_message})
-            print(f"📚 Contexto inyectado: {len(knowledge_base_context)} chars")
+Usa SOLO esta información."""
+            messages.append({"role": "system", "content": kb_msg})
+            print(f"📚 Contexto: {len(knowledge_base_context)} chars")
         
         messages.extend(history[-10:])
         messages.append({"role": "user", "content": message})
         
-        payload = {
-            "messages": messages,
-            "max_tokens": 1000,
-            "temperature": 0.7,
-            "top_p": 0.95
-        }
-        
-        print(f"Mensajes en contexto: {len(messages)}")
-        
-        response = requests.post(full_url, headers=headers, json=payload, timeout=60)
+        response = requests.post(
+            full_url, 
+            headers=headers, 
+            json={"messages": messages, "max_tokens": 1000, "temperature": 0.7},
+            timeout=60
+        )
         response.raise_for_status()
         
-        gpt_reply = response.json()['choices'][0]['message']['content']
-        print(f"GPT respondió: {gpt_reply[:100]}")
-        
-        return gpt_reply
+        return response.json()['choices'][0]['message']['content']
         
     except Exception as e:
-        print(f"Error en OpenAI: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return f"Error al procesar: {str(e)}"
+        print(f"❌ GPT error: {str(e)}")
+        return f"Error: {str(e)}"
