@@ -1,0 +1,113 @@
+┌──────────────────────────────────────────────────────────────────┐
+│                         TU APLICACIÓN                             │
+└────────────────────┬─────────────────────────────────────────────┘
+                     │
+                     ↓
+         ┌───────────────────────┐
+         │  1. USUARIO PREGUNTA  │
+         │  "¿Cuál es la política│
+         │   de devoluciones?"   │
+         └───────────┬───────────┘
+                     │
+                     ↓
+    ┌────────────────────────────────────────┐
+    │  2. AZURE AI SEARCH (Free Tier)        │
+    │  ┌──────────────────────────────────┐  │
+    │  │ Índice de documentos:            │  │
+    │  │ - politicas_empresa.txt          │  │
+    │  │ - FAQ_productos.md               │  │
+    │  │ - manual_usuario.pdf             │  │
+    │  │ - preguntas_frecuentes.docx     │  │
+    │  └──────────────────────────────────┘  │
+    │  Busca: "política devoluciones"        │
+    └────────────┬───────────────────────────┘
+                 │
+                 ↓
+    ┌────────────────────────────────────────┐
+    │  3. RECUPERA FRAGMENTOS RELEVANTES     │
+    │  "Las devoluciones se aceptan en 30    │
+    │   días con recibo..."                  │
+    └────────────┬───────────────────────────┘
+                 │
+                 ↓
+    ┌────────────────────────────────────────┐
+    │  4. GPT-4.1-MINI recibe:               │
+    │  ┌──────────────────────────────────┐  │
+    │  │ System: "Eres asistente experto" │  │
+    │  │ Context: [fragmentos de docs]    │  │
+    │  │ User: "¿política devoluciones?"  │  │
+    │  └──────────────────────────────────┘  │
+    │  Genera respuesta contextualizada      │
+    └────────────┬───────────────────────────┘
+                 │
+                 ↓
+    ┌────────────────────────────────────────┐
+    │  5. RESPUESTA AL USUARIO               │
+    │  "Según nuestra política, puedes       │
+    │   devolver productos en 30 días..."    │
+    └────────────────────────────────────────┘
+
+📍 Tareas en Azure Portal:
+├── 1. Crear Azure AI Search (Free Tier)
+│   └── Portal → Create Resource → "Azure Cognitive Search" → Free tier
+│
+├── 2. Crear Storage Account para tus documentos
+│   └── Portal → Create Storage → Standard LRS
+│
+├── 3. Configurar Indexer (importador de datos)
+│   └── AI Search → Import data
+│       ├── Data source: Azure Blob Storage
+│       ├── Select container: knowledge-base
+│       ├── Enable AI enrichment: ✅
+│       │   └── OCR + Text extraction (gratis)
+│       └── Create index + indexer
+│
+└── 4. Agregar variables de entorno en Static Web App
+    ├── SEARCH_SERVICE_NAME
+    ├── SEARCH_API_KEY
+    └── SEARCH_INDEX_NAME
+
+📍 Tareas en VS Code:
+├── 1. Instalar librería de AI Search
+│   └── pip install azure-search-documents
+│
+├── 2. Modificar __init__.py para integrar búsqueda
+│   └── Agregar función search_knowledge_base()
+│
+├── 3. Actualizar requirements.txt
+│   └── Agregar azure-search-documents
+│
+└── 4. Subir tus documentos a Blob Storage
+    └── Usar Azure Storage Explorer o CLI
+
+ℹ️ Recursos utilizados:
+1. Azure AI Search (FREE)
+   ├── Name: search-federico-kb
+   ├── Pricing tier: Free
+   └── ✅ COSTE: €0/mes
+
+2. Storage Account (BASIC)
+   ├── Name: storagefedericokb
+   ├── Performance: Standard
+   ├── Redundancy: LRS
+   └── 💰 COSTE: ~€0.20/mes
+
+3. Blob Container
+   └── Name: knowledge-base
+
+EN __init__.py
+# Nueva función de búsqueda
+def search_knowledge_base(query, search_client):
+    # Busca en tus documentos
+    # Devuelve los 3 fragmentos más relevantes
+    pass
+
+# Modificar call_openai_with_context()
+# Inyecta los fragmentos encontrados en el prompt
+
+Configuration → Environment variables:
+├── SEARCH_ENDPOINT=https://search-federico-kb.search.windows.net
+├── SEARCH_KEY=[tu-admin-key]
+└── SEARCH_INDEX_NAME=knowledge-base-index
+
+

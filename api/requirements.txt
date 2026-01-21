@@ -2,3 +2,5 @@ azure-functions
 requests
 python-dotenv
 azure-cognitiveservices-vision-computervision
+azure-search-documents
+azure-core
