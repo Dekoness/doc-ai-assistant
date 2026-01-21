@@ -121,6 +121,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 def search_knowledge_base(query, search_endpoint, search_key, index_name):
     """
     🔍 Busca en Azure AI Search y devuelve contexto relevante
+    Optimizado para el índice 'certificado-federico'
     """
     try:
         credential = AzureKeyCredential(search_key)
@@ -132,12 +133,11 @@ def search_knowledge_base(query, search_endpoint, search_key, index_name):
         
         print(f"🔎 Ejecutando búsqueda en '{index_name}': '{query[:50]}...'")
         
-        # 🆕 Búsqueda sin especificar campos (usa todos los disponibles)
+        # Búsqueda optimizada para tu índice
         results = search_client.search(
             search_text=query,
             top=3,
             include_total_count=True
-            # ❌ NO especificamos 'select' para obtener todos los campos
         )
         
         context_parts = []
@@ -146,65 +146,45 @@ def search_knowledge_base(query, search_endpoint, search_key, index_name):
         for result in results:
             result_count += 1
             
-            # 🔍 Imprimir TODOS los campos disponibles (para debugging)
-            print(f"📄 Documento {result_count} - Campos disponibles: {list(result.keys())}")
+            print(f"📄 Documento {result_count} encontrado")
             
-            # 🆕 Intentar extraer contenido de CUALQUIER campo que pueda tenerlo
-            content = None
+            # 🎯 Extraer contenido del campo 'chunk'
+            content = result.get('chunk', '')
             
-            # Lista de posibles nombres de campo que contienen texto
-            possible_content_fields = [
-                'content', 'merged_content', 'text', 'body', 
-                'layoutText', 'people', 'organizations', 'locations',
-                'keyphrases', 'language'
-            ]
+            # 📋 Extraer metadatos útiles
+            title = result.get('title', f'documento_{result_count}')
+            key_phrases = result.get('keyPhrases', [])
+            persons = result.get('persons', [])
+            locations = result.get('locations', [])
+            organizations = result.get('organizations', [])
             
-            # Buscar el primer campo con contenido sustancial
-            for field_name in possible_content_fields:
-                if field_name in result and result[field_name]:
-                    field_value = result[field_name]
-                    
-                    # Si es una lista, unir elementos
-                    if isinstance(field_value, list):
-                        field_value = ', '.join(str(x) for x in field_value)
-                    
-                    # Si es string y tiene contenido
-                    if isinstance(field_value, str) and len(field_value) > 20:
-                        content = field_value
-                        print(f"✅ Contenido encontrado en campo: '{field_name}' ({len(content)} chars)")
-                        break
-            
-            # Si no encontramos contenido en campos conocidos, buscar en CUALQUIER campo de texto
-            if not content:
-                for key, value in result.items():
-                    if isinstance(value, str) and len(value) > 50:
-                        content = value
-                        print(f"✅ Contenido encontrado en campo alternativo: '{key}' ({len(content)} chars)")
-                        break
-            
-            # Obtener nombre del documento (probar diferentes campos)
-            source = (
-                result.get('metadata_storage_name') or 
-                result.get('storage_name') or
-                result.get('name') or
-                result.get('title') or
-                f"documento_{result_count}"
-            )
-            
-            if content:
-                # Limitar a 1000 caracteres
-                content_snippet = content[:1000] if len(content) > 1000 else content
-                context_parts.append(f"📄 [Fuente: {source}]\n{content_snippet}")
-                print(f"✅ Fragmento agregado al contexto")
+            if content and len(content) > 20:
+                # Construir contexto enriquecido
+                enriched_content = f"📄 [Certificado: {title}]\n\n"
+                
+                # Agregar entidades extraídas si existen
+                if persons:
+                    enriched_content += f"👤 Personas: {', '.join(persons)}\n"
+                if organizations:
+                    enriched_content += f"🏢 Organizaciones: {', '.join(organizations)}\n"
+                if locations:
+                    enriched_content += f"📍 Ubicaciones: {', '.join(locations)}\n"
+                if key_phrases:
+                    enriched_content += f"🔑 Conceptos clave: {', '.join(key_phrases[:5])}\n"
+                
+                enriched_content += f"\n📝 Contenido:\n{content[:1200]}"
+                
+                context_parts.append(enriched_content)
+                print(f"✅ Fragmento agregado: {title} ({len(content)} chars)")
             else:
-                print(f"⚠️ No se encontró contenido de texto en el documento")
+                print(f"⚠️ Documento sin contenido suficiente")
         
         print(f"📊 Búsqueda completada: {result_count} resultados, {len(context_parts)} con contenido")
         
         if context_parts:
-            return "\n\n---\n\n".join(context_parts)
+            return "\n\n" + "="*60 + "\n\n".join(context_parts)
         else:
-            print("⚠️ No se encontró contexto útil en los resultados")
+            print("⚠️ No se encontró contexto útil")
             return ""
             
     except Exception as e:
@@ -275,19 +255,7 @@ def process_image_with_vision(image_base64, vision_key, vision_endpoint):
 
 
 def call_openai_with_context(message, history, knowledge_base_context, openai_key, openai_endpoint):
-    """
-    🤖 Llama a Azure OpenAI con contexto RAG
-    
-    Args:
-        message: Mensaje del usuario
-        history: Historial de conversación
-        knowledge_base_context: Contexto recuperado de AI Search
-        openai_key: API Key de OpenAI
-        openai_endpoint: Endpoint de OpenAI
-    
-    Returns:
-        str: Respuesta generada por GPT
-    """
+    """🤖 Llama a Azure OpenAI con contexto RAG"""
     try:
         print("Llamando a OpenAI...")
         
@@ -296,41 +264,42 @@ def call_openai_with_context(message, history, knowledge_base_context, openai_ke
             'api-key': openai_key
         }
         
-        # Construir URL completa
         if 'deployments' not in openai_endpoint:
             full_url = f"{openai_endpoint.rstrip('/')}/openai/deployments/gpt-4.1-mini/chat/completions?api-version=2024-08-01-preview"
         else:
             full_url = openai_endpoint
         
-        # 🎯 SYSTEM PROMPT con instrucciones RAG
-        system_prompt = """Eres un asistente inteligente de Azure AI con acceso a una base de conocimiento.
+        # 🎯 SYSTEM PROMPT especializado en certificaciones
+        system_prompt = """Eres un asistente especializado en información sobre Federico Zoppi y sus certificaciones profesionales.
 
-INSTRUCCIONES IMPORTANTES:
-1. Si recibes contexto de documentos [entre corchetes], úsalo como fuente principal de información
-2. Cita la fuente cuando uses información de los documentos
-3. Si no hay contexto relevante, responde con tu conocimiento general
-4. Si no sabes algo, admítelo en lugar de inventar
-5. Responde siempre en español de forma clara y concisa
-6. Puedes analizar imágenes y extraer texto de ellas"""
+INSTRUCCIONES:
+1. Tienes acceso a certificados académicos y profesionales de Federico Zoppi
+2. Cuando te presenten información de certificados, úsala como fuente AUTORITATIVA
+3. Cita siempre el nombre del certificado cuando respondas
+4. Si no encuentras información específica, di "No tengo esa información en los certificados disponibles"
+5. Puedes mencionar: institución emisora, fecha, duración, conceptos clave
+6. Responde en español de forma profesional y clara
+7. Si te preguntan por certificados que no están en la base de datos, sé honesto
 
-        # Construir mensajes
+EJEMPLO DE RESPUESTA:
+"Según el certificado de 4Geeks Academy, Federico Zoppi completó el programa Full Stack Software Developer de 360 horas en agosto de 2025."
+"""
+
         messages = [{"role": "system", "content": system_prompt}]
         
-        # 📚 Agregar contexto de KB si existe
+        # 📚 Agregar contexto de certificados
         if knowledge_base_context:
-            kb_message = f"""📚 CONTEXTO DE LA BASE DE CONOCIMIENTO:
+            kb_message = f"""📚 CERTIFICADOS DE FEDERICO ZOPPI ENCONTRADOS:
 
 {knowledge_base_context}
 
 ---
-Usa la información anterior para responder a la siguiente pregunta del usuario."""
+Usa ÚNICAMENTE esta información para responder. No inventes certificados que no aparecen aquí."""
             
             messages.append({"role": "system", "content": kb_message})
+            print(f"📚 Contexto inyectado: {len(knowledge_base_context)} chars")
         
-        # Agregar historial (últimos 10 mensajes)
         messages.extend(history[-10:])
-        
-        # Agregar mensaje actual
         messages.append({"role": "user", "content": message})
         
         payload = {
@@ -340,23 +309,18 @@ Usa la información anterior para responder a la siguiente pregunta del usuario.
             "top_p": 0.95
         }
         
-        print(f"URL: {full_url}")
         print(f"Mensajes en contexto: {len(messages)}")
         
         response = requests.post(full_url, headers=headers, json=payload, timeout=60)
-        
-        print(f"Status code: {response.status_code}")
-        
         response.raise_for_status()
         
-        result = response.json()
-        gpt_reply = result['choices'][0]['message']['content']
-        
+        gpt_reply = response.json()['choices'][0]['message']['content']
         print(f"GPT respondió: {gpt_reply[:100]}")
+        
         return gpt_reply
         
     except Exception as e:
         print(f"Error en OpenAI: {str(e)}")
         import traceback
         traceback.print_exc()
-        return f"Error al procesar con GPT: {str(e)}"
+        return f"Error al procesar: {str(e)}"
