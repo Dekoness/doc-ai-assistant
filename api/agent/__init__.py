@@ -121,18 +121,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 def search_knowledge_base(query, search_endpoint, search_key, index_name):
     """
     🔍 Busca en Azure AI Search y devuelve contexto relevante
-    
-    Args:
-        query: Pregunta del usuario
-        search_endpoint: URL del servicio de búsqueda
-        search_key: API Key de búsqueda
-        index_name: Nombre del índice
-    
-    Returns:
-        str: Contexto concatenado de los documentos encontrados
     """
     try:
-        # Crear cliente de búsqueda
         credential = AzureKeyCredential(search_key)
         search_client = SearchClient(
             endpoint=search_endpoint,
@@ -140,42 +130,87 @@ def search_knowledge_base(query, search_endpoint, search_key, index_name):
             credential=credential
         )
         
-        # Realizar búsqueda semántica
+        print(f"🔎 Ejecutando búsqueda en '{index_name}': '{query[:50]}...'")
+        
+        # 🆕 Búsqueda sin especificar campos (usa todos los disponibles)
         results = search_client.search(
             search_text=query,
-            top=3,  # Top 3 resultados más relevantes
-            select=["content", "metadata_storage_name"],  # Campos a recuperar
+            top=3,
             include_total_count=True
+            # ❌ NO especificamos 'select' para obtener todos los campos
         )
         
-        # Construir contexto desde los resultados
         context_parts = []
         result_count = 0
         
         for result in results:
             result_count += 1
             
-            # Extraer contenido
-            content = result.get('content', '')
-            source = result.get('metadata_storage_name', 'documento')
+            # 🔍 Imprimir TODOS los campos disponibles (para debugging)
+            print(f"📄 Documento {result_count} - Campos disponibles: {list(result.keys())}")
             
-            # Limitar tamaño del fragmento (max 500 chars por doc)
-            content_snippet = content[:500] if len(content) > 500 else content
+            # 🆕 Intentar extraer contenido de CUALQUIER campo que pueda tenerlo
+            content = None
             
-            context_parts.append(
-                f"[Fuente: {source}]\n{content_snippet}\n"
+            # Lista de posibles nombres de campo que contienen texto
+            possible_content_fields = [
+                'content', 'merged_content', 'text', 'body', 
+                'layoutText', 'people', 'organizations', 'locations',
+                'keyphrases', 'language'
+            ]
+            
+            # Buscar el primer campo con contenido sustancial
+            for field_name in possible_content_fields:
+                if field_name in result and result[field_name]:
+                    field_value = result[field_name]
+                    
+                    # Si es una lista, unir elementos
+                    if isinstance(field_value, list):
+                        field_value = ', '.join(str(x) for x in field_value)
+                    
+                    # Si es string y tiene contenido
+                    if isinstance(field_value, str) and len(field_value) > 20:
+                        content = field_value
+                        print(f"✅ Contenido encontrado en campo: '{field_name}' ({len(content)} chars)")
+                        break
+            
+            # Si no encontramos contenido en campos conocidos, buscar en CUALQUIER campo de texto
+            if not content:
+                for key, value in result.items():
+                    if isinstance(value, str) and len(value) > 50:
+                        content = value
+                        print(f"✅ Contenido encontrado en campo alternativo: '{key}' ({len(content)} chars)")
+                        break
+            
+            # Obtener nombre del documento (probar diferentes campos)
+            source = (
+                result.get('metadata_storage_name') or 
+                result.get('storage_name') or
+                result.get('name') or
+                result.get('title') or
+                f"documento_{result_count}"
             )
+            
+            if content:
+                # Limitar a 1000 caracteres
+                content_snippet = content[:1000] if len(content) > 1000 else content
+                context_parts.append(f"📄 [Fuente: {source}]\n{content_snippet}")
+                print(f"✅ Fragmento agregado al contexto")
+            else:
+                print(f"⚠️ No se encontró contenido de texto en el documento")
         
-        print(f"📚 Encontrados {result_count} documentos relevantes")
+        print(f"📊 Búsqueda completada: {result_count} resultados, {len(context_parts)} con contenido")
         
         if context_parts:
-            return "\n---\n".join(context_parts)
+            return "\n\n---\n\n".join(context_parts)
         else:
+            print("⚠️ No se encontró contexto útil en los resultados")
             return ""
             
     except Exception as e:
-        print(f"⚠️ Error en búsqueda (ignorando): {str(e)}")
-        # No lanzar error, solo devolver vacío
+        print(f"❌ Error en búsqueda: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return ""
 
 
