@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -182,17 +182,15 @@
         document.getElementById("totalMessages").textContent = stats.messages;
         document.getElementById("totalImages").textContent = stats.images;
         document.getElementById("totalTokens").textContent = stats.tokens;
-        document.getElementById(
-          "messageCount"
-        ).textContent = `${stats.messages} mensajes`;
+        document.getElementById("messageCount").textContent =
+          `${stats.messages} mensajes`;
 
         if (stats.responseTimes.length > 0) {
           const avg =
             stats.responseTimes.reduce((a, b) => a + b, 0) /
             stats.responseTimes.length;
-          document.getElementById(
-            "avgResponseTime"
-          ).textContent = `${Math.round(avg)}ms`;
+          document.getElementById("avgResponseTime").textContent =
+            `${Math.round(avg)}ms`;
         }
       }
 
@@ -200,7 +198,7 @@
         role,
         content,
         hasImage = false,
-        extractedText = null
+        extractedText = null,
       ) {
         const chatHistory = document.getElementById("chatHistory");
         const messageDiv = document.createElement("div");
@@ -266,7 +264,7 @@
           addMessageToChat(
             "user",
             message || "(imagen sin texto)",
-            !!selectedFile
+            !!selectedFile,
           );
 
           stats.messages++;
@@ -284,7 +282,15 @@
               });
             }
 
-            const response = await fetch("/api/agent", {
+            // En desarrollo local usa localhost:7071, en producción usa ruta relativa
+            const apiUrl =
+              window.location.hostname === "localhost" ||
+              window.location.hostname === "127.0.0.1" ||
+              window.location.hostname === "::1"
+                ? "http://localhost:7071/api/agent"
+                : "/api/agent";
+
+            const response = await fetch(apiUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -311,7 +317,7 @@
                 "assistant",
                 result.reply,
                 false,
-                result.extracted_text
+                result.extracted_text,
               );
               updateStats();
 
@@ -336,7 +342,7 @@
       setTimeout(() => {
         addMessageToChat(
           "assistant",
-          "¡Hola! Soy tu asistente de Azure AI. Puedo analizar imágenes con OCR y responder tus preguntas. ¿En qué puedo ayudarte?"
+          "¡Hola! Soy tu asistente de Azure AI. Puedo analizar imágenes con OCR y responder tus preguntas. ¿En qué puedo ayudarte?",
         );
       }, 500);
     </script>

@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "VISION_KEY": "ENxBuH5ZmHoUAXzqiQfXCwhCBkdHzdb43PhsfgknR3sXNXlekAA6JQQJ99CAAC5RqLJXJ3w3AAAFACOGQviC",
+    "VISION_ENDPOINT": "https://vision-federico-portfolio.cognitiveservices.azure.com/",
+    "OPENAI_KEY": "EmlxOHkBwi4nogUiQI8XTECQS9oXbbhhnzXaw2YqxcEM6GwVlJauJQQJ99CAAC5RqLJXJ3w3AAABACOGgKv9",
+    "OPENAI_ENDPOINT": "https://openai-federico.services.ai.azure.com/",
+    "SEARCH_ENDPOINT": "https://search-federico-kb.search.windows.net",
+    "SEARCH_ADMIN_KEY": "yt68W2SajBAMLoWhOyPlNpbEsQOwLNOfczZYqOSzQOAzSeBcf5pL",
+    "SEARCH_INDEX_NAME": "certificado-federico"
+  },
+  "Host": {
+    "CORS": "*",
+    "LocalHttpPort": 7071
+  }
+}
+
+
+
+
+

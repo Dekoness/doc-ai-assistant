@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "func: host start",
+      "type": "shell",
+      "command": "func host start --python --verbose",
+      "options": {
+        "cwd": "${workspaceFolder}/api"
+      },
+      "problemMatcher": "$func-python-watch",
+      "isBackground": true,
+      "dependsOn": "pip install (functions)"
+    },
+    {
+      "label": "pip install (functions)",
+      "type": "shell",
+      "osx": {
+        "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+      },
+      "windows": {
+        "command": "${workspaceFolder}/.venv/Scripts/python.exe -m pip install -r requirements.txt"
+      },
+      "linux": {
+        "command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/api"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
