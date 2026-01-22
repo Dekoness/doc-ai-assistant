@@ -1,2 +1,6 @@
 .env
 IMPLEMENTAR.txt
+local.settings.json
+*.vscode/
+.vscode/settings.json
+.venv/                      
