@@ -3,16 +3,92 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portfolio Azure AI - Chat Inteligente</title>
+    <title>Federico Zoppi - Azure AI Assistant</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div class="background-gradient"></div>
 
     <div class="container">
       <header class="header-glass">
-        <h1>🤖 Azure AI Assistant</h1>
-        <p class="subtitle">Computer Vision OCR + GPT-4.1-mini</p>
+        <div class="header-content">
+          <div>
+            <h1>Azure AI Assistant</h1>
+            <p class="subtitle">RAG • Computer Vision • GPT-4o-mini</p>
+          </div>
+          <div class="header-actions">
+            <a
+              href="https://storagefedericokb.blob.core.windows.net/certificados-federico/FedericoZoppiCV2025.pdf?sp=r&st=2026-01-23T01:26:24Z&se=2027-02-01T09:41:24Z&spr=https&sv=2024-11-04&sr=b&sig=czlWQyhlkJTYArm0iMjMxE4uiPeUFZC2UvOLg5mNVV0%3D"
+              target="_blank"
+              class="cv-download-btn"
+              aria-label="Descargar CV"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Descargar CV</span>
+            </a>
+            <button
+              id="themeToggle"
+              class="theme-toggle"
+              aria-label="Cambiar tema"
+            >
+              <svg
+                class="sun-icon"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+              <svg
+                class="moon-icon"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="agent-description">
+          <p>
+            👋 ¡Hola! Soy el asistente virtual de Federico Zoppi. Mi función es
+            presentarlo al mundo profesional de la tecnología.
+            <strong>Pregunta "¿Quién es Federico Zoppi?"</strong> para conocer
+            su experiencia, certificaciones y proyectos.
+          </p>
+        </div>
       </header>
 
       <!-- CHAT PRINCIPAL -->
@@ -55,7 +131,18 @@
                 class="attach-btn"
                 title="Adjuntar imagen"
               >
-                📎
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+                  />
+                </svg>
               </label>
               <input
                 type="file"
@@ -70,7 +157,18 @@
                 class="send-btn"
                 title="Enviar"
               >
-                <span class="send-icon">📤</span>
+                <span class="send-icon">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                </span>
               </button>
             </div>
           </div>
@@ -80,7 +178,7 @@
       <!-- ESTADÍSTICAS -->
       <div class="stats-container">
         <div class="stat-card glass">
-          <div class="stat-icon">💬</div>
+          <div class="stat-icon-text">MSG</div>
           <div class="stat-info">
             <span class="stat-value" id="totalMessages">0</span>
             <span class="stat-label">Mensajes</span>
@@ -88,7 +186,7 @@
         </div>
 
         <div class="stat-card glass">
-          <div class="stat-icon">📷</div>
+          <div class="stat-icon-text">IMG</div>
           <div class="stat-info">
             <span class="stat-value" id="totalImages">0</span>
             <span class="stat-label">Imágenes</span>
@@ -96,7 +194,7 @@
         </div>
 
         <div class="stat-card glass">
-          <div class="stat-icon">🔤</div>
+          <div class="stat-icon-text">TKN</div>
           <div class="stat-info">
             <span class="stat-value" id="totalTokens">0</span>
             <span class="stat-label">Tokens</span>
@@ -104,38 +202,106 @@
         </div>
 
         <div class="stat-card glass">
-          <div class="stat-icon">⚡</div>
+          <div class="stat-icon-text">MS</div>
           <div class="stat-info">
             <span class="stat-value" id="avgResponseTime">0ms</span>
-            <span class="stat-label">Tiempo promedio</span>
+            <span class="stat-label">Latencia</span>
           </div>
         </div>
       </div>
 
       <!-- INFO DE SERVICIOS -->
       <div class="services-info glass">
-        <h3>🔧 Servicios Azure Utilizados</h3>
+        <h3>Servicios Azure Implementados</h3>
         <div class="services-grid">
           <div class="service-badge">
-            <span class="service-icon">👁️</span>
-            <span>Computer Vision</span>
-            <span class="badge-free">GRATIS</span>
+            <span class="service-name">Computer Vision</span>
+            <span class="badge-tier">Free Tier</span>
+            <span class="badge-cost">$0.00/mes</span>
           </div>
           <div class="service-badge">
-            <span class="service-icon">🤖</span>
-            <span>Azure OpenAI</span>
-            <span class="badge-cost">~$0.83/mes</span>
+            <span class="service-name">Azure OpenAI (GPT-4o-mini)</span>
+            <span class="badge-tier">Pay-as-you-go</span>
+            <span class="badge-cost">~$0.50/mes</span>
           </div>
           <div class="service-badge">
-            <span class="service-icon">🌐</span>
-            <span>Static Web Apps</span>
-            <span class="badge-free">GRATIS</span>
+            <span class="service-name">AI Search</span>
+            <span class="badge-tier">Free Tier</span>
+            <span class="badge-cost">$0.00/mes</span>
+          </div>
+          <div class="service-badge">
+            <span class="service-name">Static Web Apps</span>
+            <span class="badge-tier">Free Tier</span>
+            <span class="badge-cost">$0.00/mes</span>
+          </div>
+          <div class="service-badge">
+            <span class="service-name">Blob Storage</span>
+            <span class="badge-tier">Standard LRS</span>
+            <span class="badge-cost">~$0.02/mes</span>
+          </div>
+          <div class="service-badge">
+            <span class="service-name">Azure Functions</span>
+            <span class="badge-tier">Consumption</span>
+            <span class="badge-cost">~$0.05/mes</span>
           </div>
         </div>
+      </div>
+
+      <!-- USO RESPONSABLE -->
+      <div class="usage-info glass">
+        <h3>💡 Uso Responsable</h3>
+        <p class="usage-description">
+          ¡Hey! Este asistente funciona con servicios cloud que generan costos
+          según el uso. Un uso moderado me ayuda a mantener el proyecto
+          accesible. 😊
+        </p>
+        <div class="usage-examples">
+          <div class="usage-example">
+            <span class="example-emoji">💬</span>
+            <div>
+              <strong>Conversación estándar</strong>
+              <p>10-15 mensajes al día ≈ $0.015/día</p>
+            </div>
+          </div>
+          <div class="usage-example">
+            <span class="example-emoji">📷</span>
+            <div>
+              <strong>Análisis de imágenes</strong>
+              <p>5 imágenes al día ≈ $0.00/día (Free Tier)</p>
+            </div>
+          </div>
+          <div class="usage-example">
+            <span class="example-emoji">🔍</span>
+            <div>
+              <strong>Consultas RAG</strong>
+              <p>20 búsquedas al día ≈ $0.00/día (Free Tier)</p>
+            </div>
+          </div>
+        </div>
+        <p class="usage-footer">
+          <strong>Resumen:</strong> Un uso normal (20-30 interacciones diarias)
+          supone aproximadamente <strong>$0.50-1.00/mes</strong>. ¡Úsalo con
+          confianza pero conscientemente! 🚀
+        </p>
       </div>
     </div>
 
     <script>
+      // Theme Toggle
+      const themeToggle = document.getElementById("themeToggle");
+      const body = document.body;
+
+      // Check for saved theme preference or default to 'dark'
+      const currentTheme = localStorage.getItem("theme") || "dark";
+      body.setAttribute("data-theme", currentTheme);
+
+      themeToggle.addEventListener("click", function () {
+        const currentTheme = body.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        body.setAttribute("data-theme", newTheme);
+        localStorage.setItem("theme", newTheme);
+      });
+
       let conversationHistory = [];
       let selectedFile = null;
       let stats = {
@@ -204,7 +370,7 @@
         const messageDiv = document.createElement("div");
         messageDiv.className = `message ${role} fade-in`;
 
-        const icon = role === "user" ? "👤" : "🤖";
+        const icon = role === "user" ? "U" : "AI";
         const label = role === "user" ? "Tú" : "Asistente";
         const time = new Date().toLocaleTimeString("es-ES", {
           hour: "2-digit",
@@ -213,14 +379,14 @@
 
         let imageTag = "";
         if (hasImage) {
-          imageTag = '<div class="message-tag">📷 Imagen analizada</div>';
+          imageTag = '<div class="message-tag">Imagen analizada</div>';
         }
 
         let ocrSection = "";
         if (extractedText) {
           ocrSection = `
             <div class="ocr-result">
-              <strong>📄 Texto extraído:</strong>
+              <strong>Texto extraído (OCR):</strong>
               <pre>${extractedText}</pre>
             </div>
           `;
@@ -256,7 +422,8 @@
 
           // Deshabilitar botón
           sendBtn.disabled = true;
-          sendBtn.innerHTML = '<span class="send-icon spinning">⏳</span>';
+          sendBtn.innerHTML =
+            '<span class="send-icon spinning"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>';
 
           const startTime = Date.now();
 
@@ -331,10 +498,11 @@
               throw new Error(result.error || "Error desconocido");
             }
           } catch (error) {
-            addMessageToChat("assistant", `❌ Error: ${error.message}`);
+            addMessageToChat("assistant", `Error: ${error.message}`);
           } finally {
             sendBtn.disabled = false;
-            sendBtn.innerHTML = '<span class="send-icon">📤</span>';
+            sendBtn.innerHTML =
+              '<span class="send-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></span>';
           }
         });
 
@@ -342,7 +510,7 @@
       setTimeout(() => {
         addMessageToChat(
           "assistant",
-          "¡Hola! Soy tu asistente de Azure AI. Puedo analizar imágenes con OCR y responder tus preguntas. ¿En qué puedo ayudarte?",
+          "Hola, soy tu asistente de Azure AI. Puedo analizar imágenes con OCR y responder preguntas sobre Federico Zoppi utilizando RAG (Retrieval Augmented Generation). ¿En qué puedo ayudarte?",
         );
       }, 500);
     </script>

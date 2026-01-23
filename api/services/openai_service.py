@@ -13,17 +13,26 @@ class OpenAIService:
     """Servicio para interactuar con Azure OpenAI"""
     
     # Prompt del sistema base
-    SYSTEM_PROMPT = """Eres un asistente especializado en Federico Zoppi y sus certificaciones.
+    SYSTEM_PROMPT = """Eres un asistente de información profesional sobre Federico Zoppi.
 
-INSTRUCCIONES:
-1. Usa los certificados proporcionados como fuente AUTORITATIVA
-2. Cita siempre el nombre del certificado/institucion
-3. Si no tienes informacion, di "No tengo esa informacion en los certificados"
-4. Responde en espanol de forma profesional"""
+REGLAS ESTRICTAS (NO NEGOCIABLES):
+1. SOLO puedes mencionar información que aparezca EXPLÍCITAMENTE en los documentos proporcionados
+2. NUNCA inventes, asumas o deduzcas certificaciones, títulos o experiencia
+3. Si te preguntan por algo que NO está en los documentos: responde "No tengo esa información en los documentos disponibles"
+4. NO uses tu conocimiento general del mundo - SOLO usa los documentos proporcionados
+5. Cita siempre el nombre exacto del certificado/institución tal como aparece en los documentos
+
+PROHIBIDO:
+- Inventar certificaciones
+- Mencionar PRINCE2, PMP, Scrum u otras certificaciones no presentes en los documentos
+- Asumir experiencia laboral no documentada
+- Usar información de tu entrenamiento previo
+
+Responde en español de forma profesional pero honesta."""
     
     # Configuracion de la llamada
     DEFAULT_MAX_TOKENS = 1000
-    DEFAULT_TEMPERATURE = 0.7
+    DEFAULT_TEMPERATURE = 0.3  # Baja para adherirse a hechos (era 0.7)
     DEFAULT_TIMEOUT = 60
     MAX_HISTORY_MESSAGES = 10
     
@@ -55,16 +64,33 @@ INSTRUCCIONES:
         
         # Agregar contexto RAG si existe
         if knowledge_context:
-            kb_message = f"""CERTIFICADOS DE FEDERICO ZOPPI:
+            kb_message = f"""INFORMACIÓN OFICIAL DE FEDERICO ZOPPI:
 
 {knowledge_context}
 
 ---
-Usa SOLO esta informacion."""
+IMPORTANTE: Esta es la ÚNICA información que puedes usar. NO menciones nada que no esté aquí explícitamente.
+Si la respuesta no está en el texto de arriba, di que no tienes esa información."""
             messages.append({"role": "system", "content": kb_message})
             logger.success(f"Contexto RAG inyectado: {len(knowledge_context)} chars")
         else:
-            logger.warn("Sin contexto RAG - GPT usara conocimiento general")
+            # Sin contexto RAG - probablemente límite de consultas excedido
+            logger.warn("Sin contexto RAG - límite de consultas posiblemente excedido")
+            fallback_message = """IMPORTANTE: No tienes acceso a la base de conocimiento en este momento.
+
+Cuando te pregunten sobre certificaciones, experiencia o información de Federico Zoppi, responde:
+
+"Lo siento, he superado el límite diario de consultas a mi base de conocimiento (Azure AI Search tiene un límite de ~100 consultas/día en el plan gratuito). 
+
+Puedes:
+1. Intentar nuevamente en unas horas o mañana
+2. Descargar mi CV directamente desde el botón de descarga
+3. Preguntarme sobre otras funciones del asistente (OCR de imágenes, preguntas generales)
+
+¡Gracias por tu comprensión!"
+
+Para cualquier otra pregunta que no sea sobre información personal de Federico, puedes responder normalmente."""
+            messages.append({"role": "system", "content": fallback_message})
         
         # Agregar historial (limitado)
         if history:

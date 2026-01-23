@@ -75,6 +75,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             "has_image": bool(image_base64),
             "extracted_text": ocr_text,
             "used_knowledge_base": used_rag,
+            "rag_limit_exceeded": settings.search.is_configured and not used_rag,
             "history_updated": history + [
                 {"role": "user", "content": message},
                 {"role": "assistant", "content": gpt_response}
